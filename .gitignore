@@ -1,0 +1,4 @@
+credentials.json
+.envrc
+.direnv/
+token.json
