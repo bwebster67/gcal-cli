@@ -55,16 +55,8 @@ def cmd_task(service, args):
     text = " ".join(args.text) # Join list into a single string
     print(f"Adding: '{text}'...")
 
-    dt = dateparser.parse(text)
-
-    if dt:
-        formatted_date = dt.isoformat() + 'Z'
-    else:
-        # default to today's date
-        dt = datetime.datetime.now()
-        formatted_date = dt.strftime('%Y-%m-%dT00:00:00Z')
-    service.tasks().insert(tasklist='@default', body={'title': text, 'due': formatted_date}).execute()
-    print(f"Task set for: {formatted_date}")
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+    service.tasks().insert(tasklist='@default', body={'title': text, 'due': now}).execute()
 
 def cmd_next(service, args):
     """Prints the single next upcoming event."""
