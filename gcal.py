@@ -7,6 +7,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+import dateparser
+import datetime
 
 # Scopes: Read/Write access is needed for 'add'
 SCOPES = ['https://www.googleapis.com/auth/calendar',
@@ -53,8 +55,16 @@ def cmd_task(service, args):
     text = " ".join(args.text) # Join list into a single string
     print(f"Adding: '{text}'...")
 
+    dt = dateparser.parse(text)
 
-    service.tasks().insert(tasklist='@default', body={'title': text}).execute()
+    if dt:
+        formatted_date = dt.isoformat() + 'Z'
+    else:
+        # default to today's date
+        dt = datetime.datetime.now()
+        formatted_date = dt.strftime('%Y-%m-%dT00:00:00Z')
+    service.tasks().insert(tasklist='@default', body={'title': text, 'due': formatted_date}).execute()
+    print(f"Task set for: {formatted_date}")
 
 def cmd_next(service, args):
     """Prints the single next upcoming event."""
