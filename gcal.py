@@ -9,18 +9,21 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 # Scopes: Read/Write access is needed for 'add'
-SCOPES = ['https://www.googleapis.com/auth/calendar']
+SCOPES = ['https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/tasks']
 
-def get_service():
+def get_service(api_name: string, api_version: string):
     """Handles authentication and returns the API service."""
     creds = None
     base_path = os.path.dirname(os.path.abspath(__file__))
     token_path = os.path.join(base_path, 'token.json')
     creds_path = os.path.join(base_path, 'credentials.json')
 
+    # If there are credentials
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
     
+    # If there are no saved user credentials, get them
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -30,7 +33,7 @@ def get_service():
         with open(token_path, 'w') as token:
             token.write(creds.to_json())
 
-    return build('calendar', 'v3', credentials=creds)
+    return build(api_name, api_version, credentials=creds)
 
 def cmd_add(service, args):
     """Adds an event using QuickAdd (Natural Language Processing)."""
@@ -44,6 +47,14 @@ def cmd_add(service, args):
     
     print(f"✅ Created event: {event.get('summary')}")
     print(f"   Link: {event.get('htmlLink')}")
+
+def cmd_task(service, args):
+    """Adds an event using QuickAdd (Natural Language Processing)."""
+    text = " ".join(args.text) # Join list into a single string
+    print(f"Adding: '{text}'...")
+
+
+    service.tasks().insert(tasklist='@default', body={'title': text}).execute()
 
 def cmd_next(service, args):
     """Prints the single next upcoming event."""
@@ -119,22 +130,30 @@ def main():
     parser_add = subparsers.add_parser('add', help='Add an event via natural language')
     parser_add.add_argument('text', nargs='+', help='Event description (e.g. "Dinner at 7pm")')
 
+    # Subcommand: task
+    parser_task = subparsers.add_parser('task', help='Add a task by title')
+    parser_task.add_argument('text', nargs='+', help='Task name')
+
     # Subcommand: next
     parser_next = subparsers.add_parser('next', help='Show the immediate next event')
 
     # Subcommand: today
     parser_today = subparsers.add_parser('today', help='Show remaining events for today')
 
+
     args = parser.parse_args()
     
     try:
-        service = get_service()
+        calendar_service = get_service('calendar', 'v3')
+        task_service = get_service('tasks', 'v1')
         if args.command == 'add':
-            cmd_add(service, args)
+            cmd_add(calendar_service, args)
         elif args.command == 'next':
-            cmd_next(service, args)
+            cmd_next(calendar_service, args)
         elif args.command == 'today':
-            cmd_today(service, args)
+            cmd_today(calendar_service, args)
+        elif args.command == 'task':
+            cmd_task(task_service, args)
     except Exception as e:
         print(f"Error: {e}")
 
